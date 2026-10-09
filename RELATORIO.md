@@ -8,6 +8,12 @@
 
 Cole aqui o conteúdo de `medicoes/ultima-bancada.md` da primeira execução (antes de qualquer correção).
 
+| Interação | Tempo (ms) | Renders de ItemEvento | Renders de ListaEventos |
+|---|---:|---:|---:|
+| 1. Abrir a aba Eventos | 599 | 1582 | 1 |
+| 2. Digitar "progra" (6 teclas) | 426 | 1850 | 6 |
+| 3. Favoritar o primeiro evento da lista | 179 | 96 | 1 |
+
 ---
 
 ## Parte A — Diagnóstico (SEM IA)
