@@ -22,13 +22,13 @@ Cole aqui o conteúdo de `medicoes/ultima-bancada.md` da primeira execução (an
 
 | Chamado | Consegui reproduzir? Como? | Minha hipótese (arquivo e linha) | Como vou provar |
 |---|---|---|---|
-| C1 | | | |
-| C2 | | | |
-| C3 | | | |
-| C4 | | | |
-| C5 | | | |
-| C6 | | | |
-| C7 | | | |
+| C1 | O relato descreve perda após reabrir e, às vezes, após a atualização dos eventos. | Duas causas prováveis. O hook grava imediatamente o estado inicial [] antes de terminar a leitura assíncrona, podendo sobrescrever os favoritos salvos: useEstadoPersistido.js:20. Além disso, favoritos guardam objetos e as estrelas comparam por identidade (includes); após JSON ou uma resposta nova da API, os objetos não são os mesmos, embora o total ainda use favoritos.length: FavoritosContexto.js:13, ItemEvento.js:10. Confiança alta, sem reprodução. | Testar separadamente: reiniciar com favoritos salvos e verificar contagem e estrelas; depois controlar a ordem da hidratação e confirmar se o estado inicial vazio substitui o valor persistido. |
+| C2 | Reproduzir salvando Oficina, fechando e reabrindo a aba/app. | A categoria começa em Todas e usa o mesmo hook que grava o estado inicial antes de concluir a leitura. Isso pode substituir o valor persistido: ListaEventos.js:18, useEstadoPersistido.js:20. Confiança alta, sem reprodução. | Persistir Oficina, remontar a tela e verificar se a categoria continua selecionada; observar a ordem de getItem e setItem no armazenamento. |
+| C3 | O botão de desenvolvimento “Simular cache da versão 2.0” fornece o cenário de reprodução indicado pelo relato. | O simulador grava { salvoEm, eventos }, mas lerCache devolve esse objeto e EventosProvedor o passa diretamente para setEventos. Inicio chama eventos.slice, que não existe nesse objeto: FerramentasDev.js:10, EventosContexto.js:18, Inicio.js:14. Confiança alta; o formato e o caminho incompatível estão no código. | Gravar o cache legado e recarregar. Verificar se o provedor valida/converte o formato antes de usá-lo e se a tela não lança erro enquanto a API atualiza os dados. |
+| C4 | O relato descreve leitura do armazenamento do app com root. | O token é gravado e lido diretamente pelo AsyncStorage, em texto serializado sem proteção própria: sessao.js:5, sessao.js:9. Confiança alta quanto ao armazenamento observado; a proteção exigida deve ser validada no dispositivo-alvo. | Entrar, inspecionar o AsyncStorage e confirmar que o token não está lá; testar guardar, ler e apagar pelo armazenamento seguro escolhido. |
+| C5 | O relato indica lentidão ao abrir a lista e ao digitar. | A tela ordena e filtra toda a lista em cada render e coloca todos os resultados em um ScrollView; a cada tecla, a busca atualiza o estado. Cada item também recebe uma callback nova, o que reduz o benefício de memo: ListaEventos.js:29, ListaEventos.js:61, ListaEventos.js:67. Confiança alta para a fonte de trabalho excessivo; impacto no aparelho não medido. | Rodar npm run bancada nas interações de abrir e digitar, comparar tempos e contagens de renders e perfilar no aparelho mais simples. |
+| C6 | Reproduzir abrindo uma descrição e depois aplicar a categoria Oficina. | As linhas da lista usam o índice como key; ao filtrar, o React pode reaproveitar o estado local expandido para outro evento que ocupa o mesmo índice: ListaEventos.js:64, ItemEvento.js:9. Confiança alta, sem reprodução. | Abrir a descrição de um evento, filtrar e verificar que a descrição continua ligada ao mesmo ID — ou desaparece — e nunca aparece em outro evento. |
+| C7 | Reproduzir anotando os próximos eventos, visitar a aba Eventos e voltar ao Início. | eventos.sort(...) ordena o array recebido do contexto no próprio lugar; Inicio depois toma os primeiros cinco, embora espere que permaneçam cronológicos: ListaEventos.js:29, Inicio.js:14. Confiança alta, sem reprodução. | Comparar os IDs exibidos em “Próximos eventos” antes e depois de visitar a lista; confirmar que a ordem original do array não muda. |
 
 ### Hipóteses revisadas (preencha ao final)
 
