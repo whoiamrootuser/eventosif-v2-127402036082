@@ -9,5 +9,8 @@ export async function salvarCache(eventos) {
 export async function lerCache() {
   const bruto = await AsyncStorage.getItem(CHAVES.cacheEventos);
   if (bruto == null) return null;
-  return JSON.parse(bruto);
+  const cache = JSON.parse(bruto);
+  if (Array.isArray(cache)) return cache;
+  if (Array.isArray(cache?.eventos)) return cache.eventos;
+  return null;
 }

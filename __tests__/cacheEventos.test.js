@@ -13,6 +13,7 @@ describe('cacheEventos', () => {
   });
 
   it('lê o cache salvo', async () => {
+    await salvarCache([{ id: 1, titulo: 'Semana de Tecnologia' }]);
     const cache = await lerCache();
     expect(cache).toHaveLength(1);
     expect(cache[0].titulo).toBe('Semana de Tecnologia');
