@@ -34,30 +34,48 @@ Cole aqui o conteúdo de `medicoes/ultima-bancada.md` da primeira execução (an
 
 | Chamado | Hipótese inicial estava… (certa / parcial / errada) | O que me fez mudar de ideia (evidência) |
 |---|---|---|
-| | | |
+| C1 | Certa | Os testes `preserva favoritos existentes durante a hidratação` e `reconhece um favorito persistido pela identidade estável do evento` falharam antes da correção e passaram depois. Confirmaram a corrida de leitura/escrita e a comparação por referência. |
+| C2 | Certa | `restaura a categoria persistida depois de abrir Eventos` encontrou `selected: false` antes da correção; passou quando o hook passou a esperar a hidratação antes de gravar. |
+| C3 | Certa | O teste do cache legado recebeu o envelope `{ salvoEm, eventos }` onde se esperava uma lista. A normalização passou a devolver `eventos`, mantendo também o formato atual em array. |
+| C4 | Certa | Os testes mostraram que tokens não eram gravados no SecureStore. Após a mudança, o token novo fica seguro e o token legado é migrado sem perder a sessão nem os favoritos. |
+| C5 | Não revisada | Os blocos B1–B3 não mediram o desempenho da lista. Ainda é necessário comparar a bancada antes/depois para confirmar o impacto do filtro, da ordenação e das renderizações. |
+| C6 | Não revisada | Ainda falta executar o cenário de expandir um evento e depois filtrar por Oficina, verificando se a descrição permanece associada ao mesmo ID. |
+| C7 | Não revisada | Ainda falta comparar os próximos eventos antes e depois de visitar a aba Eventos para confirmar se a ordenação altera o array compartilhado. |
 
 ---
 
 ## Parte B — Persistência
 
 ### B1 · Chamados C1 e C2
-- Causa(s) encontrada(s):
-- Teste de regressão (arquivo e nome do teste):
-- Commit do teste vermelho: `hash` · commit da correção: `hash`
-- **B-Q1.** Descreva, em ordem temporal, o que acontece desde a montagem do provedor até o valor salvo ser perdido.
-- **B-Q2.** Quantas causas o chamado C1 tinha? Como você descobriu?
+- Causa(s) encontrada(s): o hook de persistência gravava o valor inicial antes de concluir a leitura assíncrona, podendo sobrescrever os dados existentes. Separadamente, a estrela comparava objetos por referência; favoritos desserializados ou vindos de uma nova resposta da API tinham outra identidade. A seleção agora compara IDs e reconhece também os objetos já persistidos.
+- Testes de regressão: [favoritos.test.js](__tests__/favoritos.test.js) — `preserva favoritos existentes durante a hidratação`, `reconhece um favorito persistido pela identidade estável do evento` e `mantém os favoritos depois de fechar e abrir o app`; [lista.test.js](__tests__/lista.test.js) — `restaura a categoria persistida depois de abrir Eventos`.
+- Commit do teste vermelho: `bd48097` · commit da correção: `d76a411`
+- **B-Q1.** Na montagem, o hook inicia com o valor padrão, como `[]`.<br>
+  O efeito de leitura começa a migração e aguarda as operações assíncronas do armazenamento.<br>
+  Enquanto isso, o efeito de escrita gravava imediatamente o padrão na mesma chave.<br>
+  Se essa gravação terminasse antes da leitura, o valor salvo era substituído; agora a escrita só ocorre após a hidratação.
+- **B-Q2.** C1 tinha duas causas.<br>
+  A primeira era a corrida entre a leitura e a gravação do valor inicial, que podia apagar os favoritos persistidos.<br>
+  A segunda era comparar objetos por referência, fazendo a estrela apagar mesmo quando o evento continuava favoritado.<br>
+  Separei os casos em testes de hidratação e de objeto desserializado com o mesmo ID; ambos falhavam antes da correção.
 
 ### B2 · Chamado C3
-- Causa:
-- Teste de regressão:
-- Commits:
-- **B-Q3.** Por que "apagar o armazenamento inteiro quando der erro" não é uma correção aceitável?
+- Causa: o cache da versão 2.0 tem o formato `{ salvoEm, eventos }`, mas o provedor o tratava como array. Ao receber esse objeto, `Inicio` chamava `slice`, que não é uma função disponível nele. `lerCache` agora aceita o array atual e extrai a lista do envelope legado; cache válido continua sendo usado.
+- Teste de regressão: [cacheEventos.test.js](__tests__/cacheEventos.test.js) — `lê o cache legado da versão 2.0 como uma lista de eventos`.
+- Commit do teste vermelho: `07b4051` · commit da correção: `e079430`
+- **B-Q3.** Limpar todo o armazenamento apagaria dados sem relação com o cache, como favoritos, categoria e sessão do usuário.<br>
+  Isso causaria perda de dados e não corrigiria a incompatibilidade entre o envelope 2.0 e o formato esperado pelo provedor.<br>
+  A correção interpreta os dois formatos conhecidos e mantém o cache válido em uso.<br>
+  Não é necessário apagar outras chaves para recuperar a tela.
 
 ### B3 · Chamado C4
-- Causa:
-- Teste de regressão:
-- Commits:
-- **B-Q4.** O que acontece com os dados de quem já usa a versão 2.1 (favoritos e token já gravados) quando instalar a sua versão? Sua correção trata isso?
+- Causa: `sessao.js` guardava o token em texto puro no AsyncStorage. Novos tokens são gravados no `expo-secure-store`; a leitura migra o token legado para lá e remove a cópia em texto claro somente depois da gravação segura.
+- Testes de regressão: [sessao.test.js](__tests__/sessao.test.js) — `guarda tokens novos no armazenamento seguro`, `migra o token existente sem perder a sessão nem os favoritos` e `apaga o token dos dois armazenamentos ao encerrar a sessão`.
+- Commit do teste vermelho: `11d7eba` · commit da correção: `c9a996c`
+- **B-Q4.** Os favoritos existentes permanecem na chave atual do AsyncStorage; a hidratação corrigida os lê antes de gravar, e a comparação por ID continua aceitando favoritos legados em formato de objeto.<br>
+  O token 2.1 permanece disponível na chave antiga até a primeira leitura da sessão.<br>
+  Nessa leitura, ele é copiado para o SecureStore e a cópia antiga só é removida depois que a gravação segura termina.<br>
+  Assim, favoritos e sessão são preservados durante a atualização; sair da conta continua removendo o token explicitamente.
 
 ---
 
