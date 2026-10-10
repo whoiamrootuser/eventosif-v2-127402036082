@@ -7,7 +7,9 @@ import { formatarData } from '../utils/texto';
 function ItemEvento({ evento, favoritos, aoAlternarFavorito }) {
   contarRender('ItemEvento');
   const [expandido, setExpandido] = useState(false);
-  const favorito = favoritos.includes(evento);
+  const favorito = favoritos.some((item) =>
+    typeof item === 'object' && item !== null ? item.id === evento.id : item === evento.id
+  );
 
   return (
     <View testID={`evento-${evento.id}`} style={{ flexDirection: 'row', padding: 12, borderBottomWidth: 1, borderColor: '#e2e8f0' }}>

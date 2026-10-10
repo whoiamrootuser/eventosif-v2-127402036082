@@ -9,9 +9,13 @@ export function FavoritosProvedor({ children }) {
 
   const alternarFavorito = useCallback(
     (evento) => {
-      setFavoritos((atual) =>
-        atual.includes(evento) ? atual.filter((f) => f !== evento) : [...atual, evento]
-      );
+      setFavoritos((atual) => {
+        const idFavorito = (favorito) =>
+          typeof favorito === 'object' && favorito !== null ? favorito.id : favorito;
+        return atual.some((favorito) => idFavorito(favorito) === evento.id)
+          ? atual.filter((favorito) => idFavorito(favorito) !== evento.id)
+          : [...atual, evento.id];
+      });
     },
     [setFavoritos]
   );
